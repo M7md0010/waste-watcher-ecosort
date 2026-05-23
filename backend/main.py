@@ -1,6 +1,9 @@
+# pyrefly: ignore [missing-import]
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Response
 from fpdf import FPDF
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel
 from typing import List, Optional
 import database
@@ -8,7 +11,9 @@ from contextlib import asynccontextmanager
 import math
 import os
 from datetime import date
+# pyrefly: ignore [missing-import]
 import arabic_reshaper
+# pyrefly: ignore [missing-import]
 from bidi.algorithm import get_display
 
 FONTS_DIR = os.path.join(os.path.dirname(__file__), 'fonts')

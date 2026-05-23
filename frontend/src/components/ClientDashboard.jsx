@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../AuthContext';
 import { useLang } from '../LangContext';
 
-const API = 'http://localhost:8000/api/v1';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 export default function ClientDashboard() {
   const { user } = useAuth();

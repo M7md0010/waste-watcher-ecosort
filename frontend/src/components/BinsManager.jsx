@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLang } from '../LangContext';
 
-const API = 'http://localhost:8000/api/v1';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 const EMPTY_BIN = { street_id: '', waste_type: 'General', current_level: 0, latitude: 40.712, longitude: -74.006, importance_weight: 1.0 };
 
