@@ -24,6 +24,18 @@ async def get_db_pool():
     )
     return pool
 
+async def get_root_pool():
+    pool = await aiomysql.create_pool(
+        host=DB_HOST,
+        port=DB_PORT,
+        user="root",
+        password="rootpassword",
+        db=DB_NAME,
+        autocommit=True,
+        cursorclass=aiomysql.DictCursor
+    )
+    return pool
+
 async def fetch_all(pool, query, args=()):
     async with pool.acquire() as conn:
         async with conn.cursor() as cur:

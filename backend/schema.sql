@@ -402,3 +402,39 @@ LEFT JOIN
         AND ta.shift_end IS NULL
 LEFT JOIN
     DRIVER d ON ta.driver_id = d.driver_id;
+
+CREATE OR REPLACE VIEW BINS_NEEDING_COLLECTION AS
+SELECT
+    b.bin_id, b.street_id, b.waste_type, b.current_level,
+    b.latitude, b.longitude, b.importance_weight, b.last_cleaned,
+    s.street_name, l.neighborhood,
+    ROUND(b.current_level * b.importance_weight, 2) AS priority_score
+FROM BIN b
+JOIN STREET s ON b.street_id = s.street_id
+JOIN LOCATION l ON s.loc_id = l.loc_id
+WHERE b.current_level * b.importance_weight >= 70.0
+ORDER BY b.current_level * b.importance_weight DESC;
+
+DELIMITER //
+CREATE TRIGGER trg_bin_needs_collection
+AFTER UPDATE ON BIN
+FOR EACH ROW
+BEGIN
+    IF NEW.current_level * NEW.importance_weight >= 70.0
+       AND OLD.current_level * OLD.importance_weight < 70.0 THEN
+        INSERT INTO ALERT (bin_id, alert_type, severity, message)
+        VALUES (
+            NEW.bin_id,
+            'NEEDS_COLLECTION',
+            CASE
+                WHEN NEW.current_level * NEW.importance_weight >= 90.0 THEN 'CRITICAL'
+                WHEN NEW.current_level * NEW.importance_weight >= 80.0 THEN 'HIGH'
+                ELSE 'MEDIUM'
+            END,
+            CONCAT('Bin #', NEW.bin_id, ' priority score reached ',
+                   ROUND(NEW.current_level * NEW.importance_weight, 1),
+                   ' — flagged for collection')
+        );
+    END IF;
+END //
+DELIMITER ;

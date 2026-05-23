@@ -12,6 +12,8 @@ export default function AdminDashboard() {
   const [routes, setRoutes] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [drivers, setDrivers] = useState([]);
+  const [simLoading, setSimLoading] = useState(false);
+  const [simMsg, setSimMsg] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -69,6 +71,43 @@ export default function AdminDashboard() {
             return <div key={b.bin_id} className={`health-dot ${cls}`} title={`Bin #${b.bin_id} — ${b.street_name} (${b.current_level.toFixed(0)}%)`} />;
           })}
         </div>
+      </div>
+
+      <div className="card" style={{ marginTop: '1.25rem' }}>
+        <div className="card-header"><h3>{t('admin.sim_title')}</h3></div>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <button
+            className="btn btn-primary"
+            disabled={simLoading}
+            onClick={async () => {
+              setSimLoading(true);
+              try {
+                const res = await axios.post(`${API}/simulation/emergency-overflow`, { sector: 'Sector 4' });
+                setSimMsg({ type: 'success', text: `${t('admin.sim_overflow_ok')} — ${res.data.bins_overflowed} bins` });
+              } catch { setSimMsg({ type: 'error', text: t('admin.sim_fail') }); }
+              finally { setSimLoading(false); }
+            }}
+            style={{ flex: 1, minWidth: 200, padding: '0.85rem', fontSize: '0.9rem' }}
+          >
+            {simLoading ? '⏳…' : `🚨 ${t('admin.sim_overflow_btn')}`}
+          </button>
+          <button
+            className="btn btn-primary"
+            disabled={simLoading}
+            onClick={async () => {
+              setSimLoading(true);
+              try {
+                const res = await axios.post(`${API}/simulation/network-disconnect`);
+                setSimMsg({ type: 'success', text: `${t('admin.sim_disconnect_ok')} — ${res.data.disconnected.length} sensors` });
+              } catch { setSimMsg({ type: 'error', text: t('admin.sim_fail') }); }
+              finally { setSimLoading(false); }
+            }}
+            style={{ flex: 1, minWidth: 200, padding: '0.85rem', fontSize: '0.9rem', background: 'var(--warning)', color: '#000', border: 'none' }}
+          >
+            {simLoading ? '⏳…' : `📡 ${t('admin.sim_disconnect_btn')}`}
+          </button>
+        </div>
+        {simMsg && <div className={`toast ${simMsg.type}`} style={{ marginTop: '0.75rem' }}>{simMsg.text}</div>}
       </div>
 
       {sortedAlerts.length > 0 && (

@@ -25,6 +25,7 @@ export default function Controls() {
   const [routeData, setRouteData] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [allRoutes, setAllRoutes] = useState([]);
+  const [efficiency, setEfficiency] = useState(null);
 
   const [timerRunning, setTimerRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -128,11 +129,15 @@ export default function Controls() {
     e.preventDefault();
     setMessage(null);
     setRouteData(null);
+    setEfficiency(null);
     setGenerating(true);
     try {
       const res = await axios.post(`${API}/dashboard/routes`, { truck_id: parseInt(truckId) });
       const routeId = res.data.route_id;
-      const stopsRes = await axios.get(`${API}/dashboard/routes/${routeId}/stops`);
+      const [stopsRes, effRes] = await Promise.all([
+        axios.get(`${API}/dashboard/routes/${routeId}/stops`),
+        axios.get(`${API}/dashboard/routes/${routeId}/efficiency`),
+      ]);
       setRouteData({
         route_id: routeId,
         stops: stopsRes.data.stops,
@@ -140,6 +145,7 @@ export default function Controls() {
         total_distance_m: stopsRes.data.total_distance_m,
         stops_created: res.data.stops_created,
       });
+      setEfficiency(effRes.data);
       setMessage({ type: 'success', text: `Route generated — ${res.data.stops_created} bins, ${res.data.total_distance_m} m` });
       loadRoutes();
     } catch {
@@ -200,6 +206,18 @@ export default function Controls() {
             <div className="stat-card"><div className="stat-icon green">📍</div><div className="stat-info"><h4>{t('driver.total_stops')}</h4><div className="stat-value">{routeData.stops.length}</div></div></div>
             <div className="stat-card"><div className="stat-icon yellow">📐</div><div className="stat-info"><h4>{t('driver.avg_leg')}</h4><div className="stat-value">{Math.round(routeData.total_distance_m / routeData.stops.length)} m</div></div></div>
           </div>
+
+          {efficiency && (
+            <div className="card" style={{ marginTop: '1rem', border: '1px solid var(--accent)', background: 'rgba(99,102,241,0.05)' }}>
+              <div className="card-header"><h3>{t('driver.eff_title')}</h3></div>
+              <div className="stats-row">
+                <div className="stat-card"><div className="stat-icon green">✅</div><div className="stat-info"><h4>{t('driver.eff_optimized')}</h4><div className="stat-value">{efficiency.optimized_km.toFixed(2)} km</div></div></div>
+                <div className="stat-card"><div className="stat-icon red">❌</div><div className="stat-info"><h4>{t('driver.eff_unoptimized')}</h4><div className="stat-value">{efficiency.unoptimized_km.toFixed(2)} km</div></div></div>
+                <div className="stat-card"><div className="stat-icon blue">💰</div><div className="stat-info"><h4>{t('driver.eff_saved')}</h4><div className="stat-value">{efficiency.saved_km.toFixed(2)} km</div></div></div>
+                <div className="stat-card"><div className="stat-icon yellow">📊</div><div className="stat-info"><h4>{t('driver.eff_gain')}</h4><div className="stat-value">{efficiency.saved_pct}%</div></div></div>
+              </div>
+            </div>
+          )}
 
           <div className="card" style={{ marginTop: '1rem' }}>
             <div className="card-header">

@@ -100,6 +100,9 @@ class TripLogCreate(BaseModel):
     trip_date: str
     time_taken_seconds: int
 
+class SimulationSector(BaseModel):
+    sector: str = "Sector 4"
+
 class BinReportCreate(BaseModel):
     bin_id: int
     user_id: int
@@ -429,6 +432,46 @@ async def get_route_stops(route_id: int):
         })
     return {"stops": enriched, "total_distance_km": round(total_distance, 3), "total_distance_m": round(total_distance * 1000, 1)}
 
+@app.get("/api/v1/dashboard/routes/{route_id}/efficiency")
+async def get_route_efficiency(route_id: int):
+    stops_query = """
+        SELECT rs.stop_sequence, b.bin_id, b.latitude, b.longitude
+        FROM ROUTE_STOP rs
+        JOIN BIN b ON rs.bin_id = b.bin_id
+        WHERE rs.route_id = %s
+        ORDER BY rs.stop_sequence ASC
+    """
+    stops = await database.fetch_all(db_pool, stops_query, (route_id,))
+    if not stops:
+        raise HTTPException(status_code=404, detail="Route not found or has no stops")
+
+    depot = (40.7128, -74.0060)
+    optimized_dist = 0.0
+    prev = depot
+    for s in stops:
+        d = haversine(prev[0], prev[1], float(s['latitude']), float(s['longitude']))
+        optimized_dist += d
+        prev = (float(s['latitude']), float(s['longitude']))
+
+    naive_stops = sorted(stops, key=lambda x: x['bin_id'])
+    naive_dist = 0.0
+    prev = depot
+    for s in naive_stops:
+        d = haversine(prev[0], prev[1], float(s['latitude']), float(s['longitude']))
+        naive_dist += d
+        prev = (float(s['latitude']), float(s['longitude']))
+
+    saved = naive_dist - optimized_dist
+    pct = (saved / naive_dist * 100) if naive_dist > 0 else 0
+
+    return {
+        "optimized_km": round(optimized_dist, 3),
+        "unoptimized_km": round(naive_dist, 3),
+        "saved_km": round(saved, 3),
+        "saved_pct": round(pct, 1),
+        "total_stops": len(stops),
+    }
+
 @app.get("/api/v1/dashboard/routes/{route_id}/pdf")
 async def generate_route_pdf(route_id: int):
     route_query = """
@@ -657,11 +700,8 @@ async def create_route(route: RouteCreate):
     query = "INSERT INTO ROUTE (truck_id, driver_id, status) VALUES (%s, %s, 'IN_PROGRESS')"
     route_id = await database.execute_query(db_pool, query, (route.truck_id, route.driver_id))
     
-    bins_query = "SELECT bin_id, latitude, longitude, current_level, importance_weight FROM BIN"
-    bins = await database.fetch_all(db_pool, bins_query)
-        
-    # Priority Selection Filter
-    selected_bins = [b for b in bins if float(b['current_level']) * float(b['importance_weight']) >= 70.0]
+    bins_query = "SELECT bin_id, latitude, longitude, current_level, importance_weight FROM BINS_NEEDING_COLLECTION"
+    selected_bins = await database.fetch_all(db_pool, bins_query)
             
     # Shortest Path TSP Routing (Nearest Neighbor with Haversine)
     depot = (40.7128, -74.0060)
@@ -725,6 +765,41 @@ async def resolve_alert(alert_id: int):
     query = "UPDATE ALERT SET is_resolved = TRUE, resolved_at = NOW() WHERE alert_id = %s"
     await database.execute_query(db_pool, query, (alert_id,))
     return {"status": "success", "alert_id": alert_id}
+
+@app.post("/api/v1/simulation/emergency-overflow")
+async def sim_emergency_overflow(payload: SimulationSector):
+    bins_query = """
+        SELECT b.bin_id, b.current_level FROM BIN b
+        JOIN STREET s ON b.street_id = s.street_id
+        JOIN LOCATION l ON s.loc_id = l.loc_id
+        WHERE l.neighborhood = %s
+    """
+    bins = await database.fetch_all(db_pool, bins_query, (payload.sector,))
+    if not bins:
+        raise HTTPException(status_code=404, detail=f"No bins found in {payload.sector}")
+    count = 0
+    for b in bins:
+        if float(b['current_level']) < 100.0:
+            await database.execute_query(db_pool, "UPDATE BIN SET current_level = 100.00 WHERE bin_id = %s", (b['bin_id'],))
+            count += 1
+    return {"status": "success", "sector": payload.sector, "bins_overflowed": count}
+
+@app.post("/api/v1/simulation/network-disconnect")
+async def sim_network_disconnect():
+    import random as _rand
+    sensors = await database.fetch_all(db_pool, "SELECT sensor_id FROM SENSOR ORDER BY RAND() LIMIT 5")
+    if not sensors:
+        raise HTTPException(status_code=404, detail="No sensors found")
+    disconnected = []
+    for s in sensors:
+        status = _rand.choice([1, 2])
+        await database.execute_query(
+            db_pool,
+            "INSERT INTO SENSOR_READING (sensor_id, value, status_code) VALUES (%s, 0.00, %s)",
+            (s['sensor_id'], status)
+        )
+        disconnected.append({"sensor_id": s['sensor_id'], "status_code": status})
+    return {"status": "success", "disconnected": disconnected}
 
 @app.get("/")
 async def root():
