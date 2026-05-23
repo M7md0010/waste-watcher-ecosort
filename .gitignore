@@ -1,0 +1,28 @@
+# Node / Frontend build outputs
+**/node_modules/
+**/dist/
+**/dist-ssr/
+*.local
+
+# Python / Backend caches and environments
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/.venv/
+**/venv/
+**/ENV/
+
+# IDEs, OS, and Logs
+.vscode/
+.idea/
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
