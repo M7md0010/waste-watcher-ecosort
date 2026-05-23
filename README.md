@@ -5,7 +5,7 @@ WWE is a modern, full-stack waste management platform designed for the Egyptian 
 ## Project Structure
 
 - **`backend/`**: FastAPI backend with MySQL database integrations (asynchronous db calls, Amiri font Arabic PDF generator, and exception reports endpoint).
-- **`frontend/`**: Operations Dashboard (port `5173`) serving Admins and Drivers.
+- **`ops-dashboard/`**: Operations Dashboard (port `5173`) serving Admins and Drivers.
 - **`client-portal/`**: Dedicated Resident Portal (port `5174`) serving clients with active bin indicators and report submission.
 - **`docker-compose.yml`**: MySQL 8.0 database configuration.
 
@@ -34,7 +34,7 @@ For both the **Operations Dashboard** and the **Resident Portal**, run the follo
 
 #### Operations Dashboard (Admin/Driver)
 ```bash
-cd frontend
+cd ops-dashboard
 npm install
 npm run dev
 ```
