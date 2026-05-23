@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from 'react';
 import axios from 'axios';
 
+axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
+
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 const AUTH_KEY = 'wwe_client_user';
 const LANG_KEY = 'wwe_lang';
