@@ -26,7 +26,7 @@ def load_graph():
         HOSARY_CENTER,
         dist=GRAPH_RADIUS,
         network_type='drive',
-        simplify=True,
+        simplify=False,
     )
     ox.save_graphml(_graph, GRAPH_FILE)
     _graph = _graph.to_undirected()
