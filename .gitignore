@@ -28,3 +28,4 @@ lerna-debug.log*
 *.sw?
 
 cloudflared.exe
+backend/graph_cache/

@@ -7,6 +7,7 @@ import ClientPortal from './components/ClientPortal';
 import BinsManager from './components/BinsManager';
 import FleetManager from './components/FleetManager';
 import Controls from './components/Controls';
+import RouteMap from './components/RouteMap';
 
 function RoleBadge({ role }) {
   const colors = {
@@ -75,13 +76,23 @@ function AppShell() {
                   <span className="nav-icon">🗺️</span>
                   <span className="nav-label">{t('nav.routes')}</span>
                 </NavLink>
+                <NavLink to="/map" className={({ isActive }) => isActive ? 'active' : ''}>
+                  <span className="nav-icon">📍</span>
+                  <span className="nav-label">{t('nav.map')}</span>
+                </NavLink>
               </>
             )}
             {isDriver && (
-              <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
-                <span className="nav-icon">🗺️</span>
-                <span className="nav-label">{t('nav.routes')}</span>
-              </NavLink>
+              <>
+                <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
+                  <span className="nav-icon">🗺️</span>
+                  <span className="nav-label">{t('nav.routes')}</span>
+                </NavLink>
+                <NavLink to="/map" className={({ isActive }) => isActive ? 'active' : ''}>
+                  <span className="nav-icon">📍</span>
+                  <span className="nav-label">{t('nav.map')}</span>
+                </NavLink>
+              </>
             )}
           </nav>
 
@@ -107,11 +118,15 @@ function AppShell() {
                   <Route path="/bins" element={<BinsManager />} />
                   <Route path="/fleet" element={<FleetManager />} />
                   <Route path="/routes" element={<Controls />} />
+                  <Route path="/map" element={<RouteMap />} />
                 </>
               )}
 
               {isDriver && (
-                <Route path="/" element={<Controls />} />
+                <>
+                  <Route path="/" element={<Controls />} />
+                  <Route path="/map" element={<RouteMap />} />
+                </>
               )}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

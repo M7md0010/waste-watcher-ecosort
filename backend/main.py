@@ -801,6 +801,92 @@ async def sim_network_disconnect():
         disconnected.append({"sensor_id": s['sensor_id'], "status_code": status})
     return {"status": "success", "disconnected": disconnected}
 
+@app.get("/api/v1/map/config")
+async def map_config():
+    return {"center": [29.9726, 30.9443], "zoom": 15, "name": "Al Hosary Square"}
+
+@app.get("/api/v1/map/bins")
+async def map_bins():
+    query = """
+        SELECT b.bin_id, b.waste_type, b.current_level, b.latitude, b.longitude,
+               b.importance_weight, s.street_name, l.neighborhood
+        FROM BIN b
+        JOIN STREET s ON b.street_id = s.street_id
+        JOIN LOCATION l ON s.loc_id = l.loc_id
+        WHERE l.neighborhood = 'Al Hosary District'
+        ORDER BY b.bin_id
+    """
+    return await database.fetch_all(db_pool, query)
+
+@app.post("/api/v1/map/route")
+async def map_route():
+    import road_network as rn
+
+    G = rn.load_graph()
+
+    bins_query = """
+        SELECT b.bin_id, b.current_level, b.latitude, b.longitude,
+               b.importance_weight, b.waste_type, s.street_name
+        FROM BIN b
+        JOIN STREET s ON b.street_id = s.street_id
+        JOIN LOCATION l ON s.loc_id = l.loc_id
+        WHERE l.neighborhood = 'Al Hosary District'
+          AND b.current_level * b.importance_weight >= 70.0
+        ORDER BY b.current_level * b.importance_weight DESC
+    """
+    selected_bins = await database.fetch_all(db_pool, bins_query)
+    if not selected_bins:
+        return {"stops": [], "polyline": [], "total_distance_m": 0, "depot": {"lat": 29.9726, "lng": 30.9443}}
+
+    depot = (29.9726, 30.9443)
+    depot_node = rn.snap_to_nearest_node(G, depot[0], depot[1])
+
+    remaining = list(selected_bins)
+    ordered_stops = []
+    current_node = depot_node
+    total_distance = 0.0
+    full_polyline = [[depot[0], depot[1]]]
+
+    while remaining:
+        closest = None
+        min_dist = float('inf')
+        closest_node = None
+        for b in remaining:
+            bnode = rn.snap_to_nearest_node(G, float(b['latitude']), float(b['longitude']))
+            d = rn.shortest_path_distance(G, current_node, bnode)
+            if d < min_dist:
+                min_dist = d
+                closest = b
+                closest_node = bnode
+
+        if closest is None:
+            break
+
+        segment_coords = rn.shortest_path_coords(G, current_node, closest_node)
+        if segment_coords:
+            full_polyline.extend(segment_coords)
+
+        total_distance += min_dist
+        ordered_stops.append({
+            "bin_id": closest['bin_id'],
+            "lat": float(closest['latitude']),
+            "lng": float(closest['longitude']),
+            "fill": float(closest['current_level']),
+            "weight": float(closest['importance_weight']),
+            "waste_type": closest['waste_type'],
+            "street": closest['street_name'],
+            "distance_from_prev_m": round(min_dist, 1),
+        })
+        current_node = closest_node
+        remaining.remove(closest)
+
+    return {
+        "stops": ordered_stops,
+        "polyline": full_polyline,
+        "total_distance_m": round(total_distance, 1),
+        "depot": {"lat": depot[0], "lng": depot[1]},
+    }
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to Waste-Watcher EcoSort API"}
