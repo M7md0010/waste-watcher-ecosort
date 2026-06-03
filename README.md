@@ -1,6 +1,6 @@
 # WWE (Waste-Watcher EcoSort)
 
-WWE is a modern, full-stack waste management platform designed for the Egyptian market, featuring role-based portals for administrators, drivers, and residents (clients). It supports full English/Arabic internationalization (i18n), RTL layouts, dynamic routes, driver PDF exports (in Arabic), and exception reporting.
+WWE is a modern, full-stack waste management platform designed for the Egyptian market, featuring role-based portals for administrators, drivers, and residents (clients). It supports full English/Arabic internationalization (i18n), RTL layouts, dynamic routes, driver PDF exports (in Arabic), exception reporting, and **live street-level routing integration** using OpenStreetMap and OSMnx.
 
 ## Project Structure
 
